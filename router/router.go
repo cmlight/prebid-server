@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cmlight/go-adscert/pkg/adscert"
+	"github.com/cmlight/go-adscert/pkg/adscertcrypto"
 	"github.com/prebid/prebid-server/currency"
 	"github.com/prebid/prebid-server/endpoints/events"
 	"github.com/prebid/prebid-server/errortypes"
@@ -251,7 +253,13 @@ func New(cfg *config.Configuration, rateConvertor *currency.RateConverter) (r *R
 	exchanges = newExchangeMap(cfg)
 	cacheClient := pbc.NewClient(cacheHttpClient, &cfg.CacheURL, &cfg.ExtCacheURL, r.MetricsEngine)
 
-	adapters, adaptersErrs := exchange.BuildAdapters(generalHttpClient, cfg, bidderInfos, r.MetricsEngine)
+	var signer adscert.AuthenticatedConnectionsSigner
+	if cfg.AdsCertCallsign != "" {
+		signer = adscert.NewAuthenticatedConnectionsSigner(
+			adscertcrypto.NewLocalAuthenticatedConnectionsSignatory(
+				cfg.AdsCertCallsign, adscertcrypto.GenerateFakePrivateKeysForTesting(cfg.AdsCertCallsign)))
+	}
+	adapters, adaptersErrs := exchange.BuildAdapters(generalHttpClient, cfg, bidderInfos, r.MetricsEngine, signer)
 	if len(adaptersErrs) > 0 {
 		errs := errortypes.NewAggregateError("Failed to initialize adapters", adaptersErrs)
 		glog.Fatalf("%v", errs)

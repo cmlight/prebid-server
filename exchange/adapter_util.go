@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cmlight/go-adscert/pkg/adscert"
 	"github.com/prebid/prebid-server/metrics"
 
 	"github.com/prebid/prebid-server/adapters"
@@ -12,10 +13,10 @@ import (
 	"github.com/prebid/prebid-server/openrtb_ext"
 )
 
-func BuildAdapters(client *http.Client, cfg *config.Configuration, infos config.BidderInfos, me metrics.MetricsEngine) (map[openrtb_ext.BidderName]adaptedBidder, []error) {
+func BuildAdapters(client *http.Client, cfg *config.Configuration, infos config.BidderInfos, me metrics.MetricsEngine, signer adscert.AuthenticatedConnectionsSigner) (map[openrtb_ext.BidderName]adaptedBidder, []error) {
 	exchangeBidders := buildExchangeBiddersLegacy(cfg.Adapters, infos)
 
-	exchangeBiddersModern, errs := buildExchangeBidders(cfg, infos, client, me)
+	exchangeBiddersModern, errs := buildExchangeBidders(cfg, infos, client, me, signer)
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -30,7 +31,7 @@ func BuildAdapters(client *http.Client, cfg *config.Configuration, infos config.
 	return exchangeBidders, nil
 }
 
-func buildExchangeBidders(cfg *config.Configuration, infos config.BidderInfos, client *http.Client, me metrics.MetricsEngine) (map[openrtb_ext.BidderName]adaptedBidder, []error) {
+func buildExchangeBidders(cfg *config.Configuration, infos config.BidderInfos, client *http.Client, me metrics.MetricsEngine, signer adscert.AuthenticatedConnectionsSigner) (map[openrtb_ext.BidderName]adaptedBidder, []error) {
 	bidders, errs := buildBidders(cfg.Adapters, infos, newAdapterBuilders())
 	if len(errs) > 0 {
 		return nil, errs
@@ -43,7 +44,7 @@ func buildExchangeBidders(cfg *config.Configuration, infos config.BidderInfos, c
 			errs = append(errs, fmt.Errorf("%v: bidder info not found", bidder))
 			continue
 		}
-		exchangeBidders[bidderName] = adaptBidder(bidder, client, cfg, me, bidderName, info.Debug)
+		exchangeBidders[bidderName] = adaptBidder(bidder, client, cfg, me, bidderName, signer, info.Debug)
 	}
 
 	return exchangeBidders, nil

@@ -66,7 +66,7 @@ func BenchmarkOpenrtbEndpoint(b *testing.B) {
 		return
 	}
 
-	adapters, adaptersErr := exchange.BuildAdapters(server.Client(), &config.Configuration{}, infos, newTestMetrics())
+	adapters, adaptersErr := exchange.BuildAdapters(server.Client(), &config.Configuration{}, infos, newTestMetrics(), nil)
 	if adaptersErr != nil {
 		b.Fatal("unable to build adapters")
 	}

@@ -35,11 +35,11 @@ func TestBuildAdaptersSuccess(t *testing.T) {
 	}
 	metricEngine := &metrics.DummyMetricsEngine{}
 
-	bidders, errs := BuildAdapters(client, cfg, infos, metricEngine)
+	bidders, errs := BuildAdapters(client, cfg, infos, metricEngine, nil)
 
 	appnexusBidder, _ := appnexus.Builder(openrtb_ext.BidderAppnexus, config.Adapter{})
 	appnexusBidderWithInfo := adapters.BuildInfoAwareBidder(appnexusBidder, infoEnabled)
-	appnexusBidderAdapted := adaptBidder(appnexusBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderAppnexus, nil)
+	appnexusBidderAdapted := adaptBidder(appnexusBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderAppnexus, nil, nil)
 	appnexusBidderValidated := addValidatedBidderMiddleware(appnexusBidderAdapted)
 
 	idLegacyAdapted := &adaptedAdapter{lifestreet.NewLifestreetLegacyAdapter(adapters.DefaultHTTPAdapterConfig, "anyEndpoint")}
@@ -60,7 +60,7 @@ func TestBuildAdaptersErrors(t *testing.T) {
 	infos := map[string]config.BidderInfo{}
 	metricEngine := &metrics.DummyMetricsEngine{}
 
-	bidders, errs := BuildAdapters(client, cfg, infos, metricEngine)
+	bidders, errs := BuildAdapters(client, cfg, infos, metricEngine, nil)
 
 	expectedErrors := []error{
 		errors.New("unknown: unknown bidder"),
@@ -76,11 +76,11 @@ func TestBuildExchangeBidders(t *testing.T) {
 
 	appnexusBidder, _ := appnexus.Builder(openrtb_ext.BidderAppnexus, config.Adapter{})
 	appnexusBidderWithInfo := adapters.BuildInfoAwareBidder(appnexusBidder, infoEnabled)
-	appnexusBidderAdapted := adaptBidder(appnexusBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderAppnexus, nil)
+	appnexusBidderAdapted := adaptBidder(appnexusBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderAppnexus, nil, nil)
 
 	rubiconBidder, _ := rubicon.Builder(openrtb_ext.BidderRubicon, config.Adapter{})
 	rubiconBidderWithInfo := adapters.BuildInfoAwareBidder(rubiconBidder, infoEnabled)
-	rubiconBidderAdapted := adaptBidder(rubiconBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderRubicon, nil)
+	rubiconBidderAdapted := adaptBidder(rubiconBidderWithInfo, client, &config.Configuration{}, metricEngine, openrtb_ext.BidderRubicon, nil, nil)
 
 	testCases := []struct {
 		description     string
@@ -125,7 +125,7 @@ func TestBuildExchangeBidders(t *testing.T) {
 
 	for _, test := range testCases {
 		cfg := &config.Configuration{Adapters: test.adapterConfig}
-		bidders, errs := buildExchangeBidders(cfg, test.bidderInfos, client, metricEngine)
+		bidders, errs := buildExchangeBidders(cfg, test.bidderInfos, client, metricEngine, nil)
 		assert.Equal(t, test.expectedBidders, bidders, test.description+":bidders")
 		assert.ElementsMatch(t, test.expectedErrors, errs, test.description+":errors")
 	}

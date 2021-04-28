@@ -16,6 +16,7 @@ import (
 	"github.com/prebid/prebid-server/config/util"
 	"github.com/prebid/prebid-server/currency"
 
+	"github.com/cmlight/go-adscert/pkg/adscert"
 	nativeRequests "github.com/mxmCherry/openrtb/v15/native1/request"
 	nativeResponse "github.com/mxmCherry/openrtb/v15/native1/response"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
@@ -91,7 +92,7 @@ type pbsOrtbSeatBid struct {
 //
 // The name refers to the "Adapter" architecture pattern, and should not be confused with a Prebid "Adapter"
 // (which is being phased out and replaced by Bidder for OpenRTB auctions)
-func adaptBidder(bidder adapters.Bidder, client *http.Client, cfg *config.Configuration, me metrics.MetricsEngine, name openrtb_ext.BidderName, debugInfo *config.DebugInfo) adaptedBidder {
+func adaptBidder(bidder adapters.Bidder, client *http.Client, cfg *config.Configuration, me metrics.MetricsEngine, name openrtb_ext.BidderName, signer adscert.AuthenticatedConnectionsSigner, debugInfo *config.DebugInfo) adaptedBidder {
 	return &bidderAdapter{
 		Bidder:     bidder,
 		BidderName: name,
@@ -102,6 +103,7 @@ func adaptBidder(bidder adapters.Bidder, client *http.Client, cfg *config.Config
 			DisableConnMetrics: cfg.Metrics.Disabled.AdapterConnectionMetrics,
 			DebugInfo:          config.DebugInfo{Allow: parseDebugInfo(debugInfo)},
 		},
+		signer: signer,
 	}
 }
 
@@ -118,6 +120,7 @@ type bidderAdapter struct {
 	Client     *http.Client
 	me         metrics.MetricsEngine
 	config     bidderAdapterConfig
+	signer     adscert.AuthenticatedConnectionsSigner
 }
 
 type bidderAdapterConfig struct {
@@ -135,6 +138,23 @@ func (bidder *bidderAdapter) requestBid(ctx context.Context, request *openrtb2.B
 			errs = append(errs, &errortypes.FailedToRequestBids{Message: "The adapter failed to generate any bid requests, but also failed to generate an error explaining why"})
 		}
 		return nil, errs
+	}
+
+	// TODO: set up configuration controls per bidder and experimental rollout.
+	if bidder.signer != nil {
+		for _, oneReqData := range reqData {
+			signature, err := bidder.signer.SignAuthenticatedConnection(
+				adscert.AuthenticatedConnectionSignatureParams{
+					DestinationURL: oneReqData.Uri,
+					RequestBody:    oneReqData.Body,
+				},
+			)
+			if err != nil {
+				// Figure out error handling
+				continue
+			}
+			oneReqData.SetAdsCertAuth(signature.SignatureMessages)
+		}
 	}
 
 	// Make any HTTP requests in parallel.

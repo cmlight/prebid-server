@@ -131,8 +131,16 @@ type ExtImpBidder struct {
 	Bidder json.RawMessage `json:"bidder"`
 }
 
+// SetBasicAuth sets an HTTP "Authorization" header using the RFC 7617 Basic
+// HTTP authentication scheme. See https://tools.ietf.org/html/rfc7617
 func (r *RequestData) SetBasicAuth(username string, password string) {
 	r.Headers.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))
+}
+
+// SetAdsCertAuth sets the HTTP header expected for the IAB Tech Lab ads.cert
+// Authenticated Connections server-to-server authentication scheme.
+func (r *RequestData) SetAdsCertAuth(signatures []string) {
+	r.Headers["X-Ads-Cert-Auth"] = signatures
 }
 
 type ExtraRequestInfo struct {
